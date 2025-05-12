@@ -1,46 +1,81 @@
-# Usa una imagen base oficial de Python (elige una versión compatible)
-# ASEGÚRATE DE QUE ESTA LÍNEA (la siguiente) SEA EXACTAMENTE ASÍ:
-FROM python:3.10-slim-buster
+# Use official Python image as base
+FROM python:3.9-slim
 
-# Establece el directorio de trabajo
-WORKDIR /app
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+ENV DEBIAN_FRONTEND noninteractive
 
-# Instala dependencias del sistema:
-# - ca-certificates: Necesario para conexiones HTTPS (wget)
-# - wget y gnupg: Para añadir el repositorio de Google
-# - google-chrome-stable: El navegador
-# - chromedriver: El controlador para Selenium
-# - Limpia las listas de apt al final para reducir el tamaño de la imagen
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates \
     wget \
     gnupg \
-    # Añade la llave del repositorio de Google Chrome
-    && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
-    # Añade la fuente del repositorio de Google Chrome
-    && sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list' \
-    # Actualiza la lista de paquetes de nuevo DESPUÉS de añadir el nuevo repo
-    && apt-get update \
-    # Instala Chrome y ChromeDriver
-    && apt-get install -y google-chrome-stable chromedriver \
-    # Limpia los paquetes descargados y las listas
-    && apt-get purge -y --auto-remove wget gnupg \
+    ca-certificates \
+    fonts-liberation \
+    libappindicator3-1 \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libatk1.0-0 \
+    libc6 \
+    libcairo2 \
+    libcups2 \
+    libdbus-1-3 \
+    libexpat1 \
+    libfontconfig1 \
+    libgbm1 \
+    libgcc1 \
+    libglib2.0-0 \
+    libgtk-3-0 \
+    libnspr4 \
+    libnss3 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libstdc++6 \
+    libx11-6 \
+    libx11-xcb1 \
+    libxcb1 \
+    libxcomposite1 \
+    libxcursor1 \
+    libxdamage1 \
+    libxext6 \
+    libxfixes3 \
+    libxi6 \
+    libxrandr2 \
+    libxrender1 \
+    libxss1 \
+    libxtst6 \
+    lsb-release \
+    xdg-utils \
     && rm -rf /var/lib/apt/lists/*
-    # ¡IMPORTANTE: NO hay barra invertida (\) al final de la línea anterior!
 
-# Copia el archivo de requerimientos
-COPY requirements.txt requirements.txt
+# Install Chrome for Selenium
+RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable \
+    && rm -rf /var/lib/apt/lists/*
 
-# Instala las dependencias de Python
-RUN pip install --no-cache-dir --upgrade pip
+# Install ChromeDriver (match version with installed Chrome)
+RUN CHROME_VERSION=$(google-chrome --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+') \
+    && CHROME_MAJOR_VERSION=$(echo $CHROME_VERSION | cut -d'.' -f1) \
+    && CHROMEDRIVER_VERSION=$(wget -qO- https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_MAJOR_VERSION}) \
+    && wget -q "https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip" \
+    && unzip chromedriver_linux64.zip \
+    && mv chromedriver /usr/local/bin/ \
+    && rm chromedriver_linux64.zip
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements first to leverage Docker cache
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copia el resto del código de tu aplicación
+# Copy the rest of the application
 COPY . .
 
-# Expone el puerto en el que corre FastAPI (Usa 8000 o $PORT si Railway lo asigna)
+# Expose the port the app runs on
 EXPOSE 8000
 
-# Comando para ejecutar tu aplicación (ajusta si es necesario)
-# Reemplaza 'your_main_script_name:app' con el nombre correcto
-CMD ["uvicorn", "your_main_script_name:app", "--host", "0.0.0.0", "--port", "8000"]
+# Command to run the application
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
