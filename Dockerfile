@@ -20,11 +20,12 @@ RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key
     && rm -rf /var/lib/apt/lists/*
 
 # Install ChromeDriver
-RUN CHROME_DRIVER_VERSION=$(curl -sS https://chromedriver.storage.googleapis.com/LATEST_RELEASE) \
+RUN CHROME_DRIVER_VERSION=$(curl -sS chromedriver.storage.googleapis.com/LATEST_RELEASE) \
     && wget -N https://chromedriver.storage.googleapis.com/${CHROME_DRIVER_VERSION}/chromedriver_linux64.zip -P ~/tmp \
     && unzip ~/tmp/chromedriver_linux64.zip -d ~/tmp \
     && mv ~/tmp/chromedriver /usr/local/bin/chromedriver \
-    && chmod +x /usr/local/bin/chromedriver
+    && chmod +x /usr/local/bin/chromedriver \
+    && rm ~/tmp/chromedriver_linux64.zip
 
 # Copy the current directory contents into the container at /app
 COPY . /app
@@ -36,8 +37,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Expose the port the app runs on
 EXPOSE 8000
 
-# Define environment variable to ensure Chrome runs in headless mode
+# Add logging to help diagnose WebDriver issues
+RUN google-chrome --version
+RUN chromedriver --version
+
+# Define environment variables
+ENV PYTHONUNBUFFERED=1
 ENV DISPLAY=:99
+ENV PATH="/usr/local/bin:${PATH}"
 
 # Command to run the application
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

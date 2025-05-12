@@ -55,40 +55,97 @@ app.add_middleware(
 
 # --- Selenium WebDriver Initialization ---
 def init_driver():
-    """Initialize Chrome WebDriver in headless mode for Docker environment."""
-    print("Initializing WebDriver...")
-    chrome_options = ChromeOptions()
+    """
+    Initialize Chrome WebDriver in headless mode with extensive error handling and logging.
     
-    # Docker-specific Chrome options
+    This version adds multiple fallback mechanisms and detailed error logging
+    to help diagnose WebDriver initialization issues.
+    """
+    import os
+    import shutil
+    import traceback
+    
+    print("Starting WebDriver initialization process...")
+    
+    # Potential ChromeDriver paths
+    potential_paths = [
+        '/usr/local/bin/chromedriver',  # Docker standard path
+        '/usr/bin/chromedriver',        # Alternative system path
+        shutil.which('chromedriver'),   # System PATH lookup
+        os.path.join(os.getcwd(), 'chromedriver'),  # Current directory
+    ]
+    
+    # Chrome and ChromeDriver version logging
+    try:
+        import subprocess
+        chrome_version = subprocess.check_output(['google-chrome', '--version']).decode('utf-8').strip()
+        print(f"Chrome version: {chrome_version}")
+    except Exception as ver_err:
+        print(f"Could not determine Chrome version: {ver_err}")
+    
+    # Detailed Chrome options for maximum compatibility
+    chrome_options = ChromeOptions()
     chrome_options.add_argument('--headless')
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
     chrome_options.add_argument('--disable-gpu')
-    chrome_options.add_argument('--window-size=1920x1080')
     chrome_options.add_argument('--remote-debugging-port=9222')
+    chrome_options.add_argument('--window-size=1920x1080')
     
-    # Using a common user agent
+    # Add more verbose logging
+    chrome_options.add_argument('--verbose')
+    
+    # User agent and other standard configurations
     chrome_options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
     
-    # Disable logging clutter from Selenium/Chrome
+    # Experimental options for stability
     chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
-    chrome_options.add_argument('--log-level=3')
-
+    
+    # Multiple attempts with different paths and configurations
+    for driver_path in potential_paths:
+        try:
+            print(f"Attempting to initialize WebDriver with path: {driver_path}")
+            
+            # Different initialization strategies
+            if driver_path and os.path.exists(driver_path):
+                # Strategy 1: Explicit path
+                print(f"Using explicit path: {driver_path}")
+                service = webdriver.chrome.service.Service(executable_path=driver_path)
+                driver = webdriver.Chrome(service=service, options=chrome_options)
+                print(f"WebDriver successfully initialized from {driver_path}")
+                return driver
+            
+            # Strategy 2: Default path (no explicit path)
+            if not driver_path:
+                print("Attempting default ChromeDriver initialization")
+                service = webdriver.chrome.service.Service()
+                driver = webdriver.Chrome(service=service, options=chrome_options)
+                print("WebDriver successfully initialized using default service")
+                return driver
+        
+        except WebDriverException as wd_err:
+            print(f"WebDriverException with path {driver_path}: {wd_err}")
+            print(traceback.format_exc())
+        
+        except Exception as gen_err:
+            print(f"General exception with path {driver_path}: {gen_err}")
+            print(traceback.format_exc())
+    
+    # Extensive logging if all attempts fail
+    print("CRITICAL: ALL WEBDRIVER INITIALIZATION ATTEMPTS FAILED!")
+    print("Debugging Information:")
+    print("----------------------")
+    
+    # System information logging
     try:
-        # Explicitly specify the chromedriver path for Docker
-        service = webdriver.chrome.service.Service(executable_path='/usr/local/bin/chromedriver')
-        driver = webdriver.Chrome(service=service, options=chrome_options)
-        print("WebDriver initialized successfully in Docker environment.")
-        return driver
-    except WebDriverException as e:
-        print(f"WebDriver initialization failed: {e}")
-        print("Detailed error traceback:")
-        print(traceback.format_exc())
-        return None
-    except Exception as e_outer:
-        print(f"Unexpected error during WebDriver initialization: {e_outer}")
-        print(traceback.format_exc())
-        return None
+        print("System PATH:", os.environ.get('PATH', 'PATH not available'))
+        print("Current Working Directory:", os.getcwd())
+        print("Contents of /usr/local/bin:", os.listdir('/usr/local/bin') if os.path.exists('/usr/local/bin') else "Directory not found")
+        print("Contents of /usr/bin:", os.listdir('/usr/bin') if os.path.exists('/usr/bin') else "Directory not found")
+    except Exception as log_err:
+        print(f"Could not log system information: {log_err}")
+    
+    return None
 
 
 # --- parse_table and extract_month_from_heading functions remain the same ---
