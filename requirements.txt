@@ -4,4 +4,11 @@ fastapi==0.109.0
 uvicorn==0.27.0
 requests==2.31.0
 python-dateutil==2.8.2
-webdriver-manager==3.8.6  # Opcional para manejo automático de drivers
+webdriver-manager==3.8.6  
+fastapi==0.109.1
+uvicorn==0.27.0
+beautifulsoup4==4.12.3
+selenium==4.18.1
+requests==2.31.0
+python-multipart==0.0.6
+pydantic==2.6.1
