@@ -7,8 +7,8 @@ RUN apt-get update && \
     wget \
     gnupg \
     unzip \
-    curl \  # Added curl here
-    && rm -rf /var/lib/apt/lists/*
+    curl && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install Google Chrome (specific version)
 RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - && \
@@ -16,8 +16,8 @@ RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key
     apt-get update && \
     apt-get install -y google-chrome-stable=136.0.7103.92-1
 
-# Install matching ChromeDriver (use the major version number)
-RUN CHROMEDRIVER_VERSION=$(curl -sS https://chromedriver.storage.googleapis.com/LATEST_RELEASE_136) && \
+# Install matching ChromeDriver (hardcoded version)
+RUN CHROMEDRIVER_VERSION=136.0.6949.63 && \
     wget -q "https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip" -O /tmp/chromedriver.zip && \
     unzip /tmp/chromedriver.zip -d /usr/local/bin/ && \
     chmod +x /usr/local/bin/chromedriver && \
