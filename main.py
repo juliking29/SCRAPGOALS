@@ -84,34 +84,22 @@ async def startup_event():
         # Don't exit - let the init_driver handle it
 
 def init_driver():
-    """Initialize Chrome WebDriver in headless mode with version checks."""
-    print("Initializing WebDriver...")
-    
     chrome_options = ChromeOptions()
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
+    chrome_options.add_argument('--headless=new')
     chrome_options.add_argument('--disable-gpu')
-    chrome_options.add_argument('--headless=new')  # New headless mode
     chrome_options.add_argument('--window-size=1920x1080')
     chrome_options.add_argument('--remote-debugging-port=9222')
-    chrome_options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36')
     
-    # Configuraciones adicionales importantes
+    # Especifica la ruta de Chrome en Railway (puede variar)
     chrome_options.binary_location = '/usr/bin/google-chrome-stable'
-    chrome_options.add_argument('--disable-blink-features=AutomationControlled')
-    chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    chrome_options.add_experimental_option('useAutomationExtension', False)
-
+    
     try:
-        # Intento con Service explícito
-        from selenium.webdriver.chrome.service import Service
-        service = Service(executable_path='/usr/local/bin/chromedriver')
-        driver = webdriver.Chrome(service=service, options=chrome_options)
-        print("WebDriver initialized successfully!")
+        driver = webdriver.Chrome(options=chrome_options)
         return driver
     except Exception as e:
-        print(f"Error initializing WebDriver: {str(e)}")
-        print(traceback.format_exc())
+        print(f"Error al iniciar Chrome: {e}")
         return None
 
 def extract_month_from_heading(heading_text):
