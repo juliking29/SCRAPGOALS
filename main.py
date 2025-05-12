@@ -55,97 +55,57 @@ app.add_middleware(
 
 # --- Selenium WebDriver Initialization ---
 def init_driver():
-    """
-    Initialize Chrome WebDriver in headless mode with extensive error handling and logging.
-    
-    This version adds multiple fallback mechanisms and detailed error logging
-    to help diagnose WebDriver initialization issues.
-    """
-    import os
-    import shutil
-    import traceback
-    
-    print("Starting WebDriver initialization process...")
-    
-    # Potential ChromeDriver paths
-    potential_paths = [
-        '/usr/local/bin/chromedriver',  # Docker standard path
-        '/usr/bin/chromedriver',        # Alternative system path
-        shutil.which('chromedriver'),   # System PATH lookup
-        os.path.join(os.getcwd(), 'chromedriver'),  # Current directory
-    ]
-    
-    # Chrome and ChromeDriver version logging
-    try:
-        import subprocess
-        chrome_version = subprocess.check_output(['google-chrome', '--version']).decode('utf-8').strip()
-        print(f"Chrome version: {chrome_version}")
-    except Exception as ver_err:
-        print(f"Could not determine Chrome version: {ver_err}")
-    
-    # Detailed Chrome options for maximum compatibility
+    """Initialize Chrome WebDriver in headless mode."""
+    print("Initializing WebDriver...")
     chrome_options = ChromeOptions()
     chrome_options.add_argument('--headless')
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
     chrome_options.add_argument('--disable-gpu')
-    chrome_options.add_argument('--remote-debugging-port=9222')
     chrome_options.add_argument('--window-size=1920x1080')
-    
-    # Add more verbose logging
-    chrome_options.add_argument('--verbose')
-    
-    # User agent and other standard configurations
+    # Using a common user agent
     chrome_options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
-    
-    # Experimental options for stability
+    # Disable logging clutter from Selenium/Chrome
     chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
-    
-    # Multiple attempts with different paths and configurations
-    for driver_path in potential_paths:
-        try:
-            print(f"Attempting to initialize WebDriver with path: {driver_path}")
-            
-            # Different initialization strategies
-            if driver_path and os.path.exists(driver_path):
-                # Strategy 1: Explicit path
-                print(f"Using explicit path: {driver_path}")
-                service = webdriver.chrome.service.Service(executable_path=driver_path)
-                driver = webdriver.Chrome(service=service, options=chrome_options)
-                print(f"WebDriver successfully initialized from {driver_path}")
-                return driver
-            
-            # Strategy 2: Default path (no explicit path)
-            if not driver_path:
-                print("Attempting default ChromeDriver initialization")
-                service = webdriver.chrome.service.Service()
-                driver = webdriver.Chrome(service=service, options=chrome_options)
-                print("WebDriver successfully initialized using default service")
-                return driver
-        
-        except WebDriverException as wd_err:
-            print(f"WebDriverException with path {driver_path}: {wd_err}")
-            print(traceback.format_exc())
-        
-        except Exception as gen_err:
-            print(f"General exception with path {driver_path}: {gen_err}")
-            print(traceback.format_exc())
-    
-    # Extensive logging if all attempts fail
-    print("CRITICAL: ALL WEBDRIVER INITIALIZATION ATTEMPTS FAILED!")
-    print("Debugging Information:")
-    print("----------------------")
-    
-    # System information logging
+    chrome_options.add_argument('--log-level=3') # Suppress logs further
+
+
+    # --- IMPORTANT: WebDriver Path ---
+    # Option 1: Assume chromedriver is in PATH (common setup)
     try:
-        print("System PATH:", os.environ.get('PATH', 'PATH not available'))
-        print("Current Working Directory:", os.getcwd())
-        print("Contents of /usr/local/bin:", os.listdir('/usr/local/bin') if os.path.exists('/usr/local/bin') else "Directory not found")
-        print("Contents of /usr/bin:", os.listdir('/usr/bin') if os.path.exists('/usr/bin') else "Directory not found")
-    except Exception as log_err:
-        print(f"Could not log system information: {log_err}")
-    
-    return None
+         # Adding service object explicitly can sometimes help, even for PATH
+         service = webdriver.chrome.service.Service()
+         driver = webdriver.Chrome(service=service, options=chrome_options)
+         print("WebDriver initialized successfully (using Service, assumed from PATH).")
+         return driver
+    except WebDriverException as e:
+         print(f"WebDriverException assuming PATH failed: {e}")
+         # Option 2: Explicitly specify the path (Uncomment and modify if needed)
+         # webdriver_path = '/path/to/your/chromedriver' # <--- CHANGE THIS PATH
+         # webdriver_path = 'C:\\path\\to\\your\\chromedriver.exe' # Windows example
+         # if not os.path.exists(webdriver_path):
+         #     print(f"ERROR: WebDriver not found at specified path: {webdriver_path}")
+         #     return None
+         # try:
+         #     service = webdriver.chrome.service.Service(executable_path=webdriver_path)
+         #     driver = webdriver.Chrome(service=service, options=chrome_options)
+         #     print(f"WebDriver initialized successfully from path: {webdriver_path}")
+         #     return driver
+         # except WebDriverException as e_path:
+         #      print(f"WebDriverException using explicit path failed: {e_path}")
+         #      print("Please ensure ChromeDriver is installed and accessible.")
+         #      return None
+         # except Exception as e_gen:
+         #      print(f"Generic Exception during WebDriver initialization: {e_gen}")
+         #      return None
+
+         # If PATH failed and explicit path is commented out/failed
+         print("Could not initialize WebDriver. Ensure ChromeDriver is in your PATH or specify the path in the script.")
+         return None
+    except Exception as e_outer:
+         print(f"Unexpected error during WebDriver initialization: {e_outer}")
+         print(traceback.format_exc())
+         return None
 
 
 # --- parse_table and extract_month_from_heading functions remain the same ---

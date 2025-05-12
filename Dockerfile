@@ -1,50 +1,42 @@
-# Use an official Python runtime as a parent image
-FROM python:3.9-slim
+# Use an official Python base image (choose a version compatible with your project)
+FROM python:3.10-slim-buster
 
-# Set the working directory in the container
+# Set the working directory
 WORKDIR /app
 
-# Install system dependencies for Chrome and ChromeDriver
-RUN apt-get update && apt-get install -y \
+# Install system dependencies:
+# - wget and gnupg for adding Google's repo
+# - google-chrome-stable (the browser)
+# - chromedriver
+# - Clean up apt lists afterwards to keep image size down
+RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     gnupg \
-    unzip \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Chrome browser
-RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
-    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
+    # Add Google Chrome repository
+    && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list' \
+    # Install Chrome and ChromeDriver
     && apt-get update \
-    && apt-get install -y google-chrome-stable \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get install -y google-chrome-stable chromedriver \
+    # Clean up
+    && apt-get purge -y --auto-remove wget gnupg \
+    && rm -rf /var/lib/apt/lists/* \
+    # Optional: Create a link for chromedriver if needed, though package install usually puts it in PATH
+    # && ln -s /usr/bin/chromedriver /usr/local/bin/chromedriver
 
-# Install ChromeDriver
-RUN CHROME_DRIVER_VERSION=$(curl -sS chromedriver.storage.googleapis.com/LATEST_RELEASE) \
-    && wget -N https://chromedriver.storage.googleapis.com/${CHROME_DRIVER_VERSION}/chromedriver_linux64.zip -P ~/tmp \
-    && unzip ~/tmp/chromedriver_linux64.zip -d ~/tmp \
-    && mv ~/tmp/chromedriver /usr/local/bin/chromedriver \
-    && chmod +x /usr/local/bin/chromedriver \
-    && rm ~/tmp/chromedriver_linux64.zip
-
-# Copy the current directory contents into the container at /app
-COPY . /app
+# Copy requirements file
+COPY requirements.txt requirements.txt
 
 # Install Python dependencies
-COPY requirements.txt /app/
+RUN pip install --no-cache-dir --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose the port the app runs on
+# Copy the rest of your application code
+COPY . .
+
+# Expose the port FastAPI runs on (default is 8000 for uvicorn)
 EXPOSE 8000
 
-# Add logging to help diagnose WebDriver issues
-RUN google-chrome --version
-RUN chromedriver --version
-
-# Define environment variables
-ENV PYTHONUNBUFFERED=1
-ENV DISPLAY=:99
-ENV PATH="/usr/local/bin:${PATH}"
-
-# Command to run the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Command to run your application (adjust if needed)
+# Use 0.0.0.0 to bind to all network interfaces within the container
+CMD ["uvicorn", "your_main_script_name:app", "--host", "0.0.0.0", "--port", "8000"]
