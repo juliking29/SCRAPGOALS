@@ -7,6 +7,7 @@ RUN apt-get update && \
     wget \
     gnupg \
     unzip \
+    curl \  # Added curl here
     && rm -rf /var/lib/apt/lists/*
 
 # Install Google Chrome (specific version)
