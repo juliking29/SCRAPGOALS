@@ -1,42 +1,48 @@
-# Use an official Python base image (choose a version compatible with your project)
-FROM python:3.10-slim-buster
+# Usa una imagen base oficial de Python (elige una versión compatible)
+FROM python:3.10-slim-buster # O python:3.11-slim-buster, etc.
 
-# Set the working directory
+# Establece el directorio de trabajo
 WORKDIR /app
 
-# Install system dependencies:
-# - wget and gnupg for adding Google's repo
-# - google-chrome-stable (the browser)
-# - chromedriver
-# - Clean up apt lists afterwards to keep image size down
+# Instala dependencias del sistema:
+# - ca-certificates: Necesario para conexiones HTTPS (wget)
+# - wget y gnupg: Para añadir el repositorio de Google
+# - google-chrome-stable: El navegador
+# - chromedriver: El controlador para Selenium
+# - Limpia las listas de apt al final para reducir el tamaño de la imagen
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
     wget \
     gnupg \
-    # Add Google Chrome repository
+    # Añade la llave del repositorio de Google Chrome
     && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
-    && sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list' \
-    # Install Chrome and ChromeDriver
+    # Añade la fuente del repositorio de Google Chrome
+    # Usamos > en lugar de >> para evitar duplicados si se ejecuta varias veces
+    && sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list' \
+    # Actualiza la lista de paquetes de nuevo DESPUÉS de añadir el nuevo repo
     && apt-get update \
+    # Instala Chrome y ChromeDriver
     && apt-get install -y google-chrome-stable chromedriver \
-    # Clean up
+    # Limpia los paquetes descargados y las listas
     && apt-get purge -y --auto-remove wget gnupg \
-    && rm -rf /var/lib/apt/lists/* \
-    # Optional: Create a link for chromedriver if needed, though package install usually puts it in PATH
-    # && ln -s /usr/bin/chromedriver /usr/local/bin/chromedriver
+    && rm -rf /var/lib/apt/lists/*
+    # ¡¡¡ IMPORTANTE: NO hay barra invertida (\) al final de la línea anterior !!!
 
-# Copy requirements file
+# Copia el archivo de requerimientos
 COPY requirements.txt requirements.txt
 
-# Install Python dependencies
+# Instala las dependencias de Python
 RUN pip install --no-cache-dir --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of your application code
+# Copia el resto del código de tu aplicación
 COPY . .
 
-# Expose the port FastAPI runs on (default is 8000 for uvicorn)
+# Expone el puerto en el que corre FastAPI (Usa 8000 o $PORT si Railway lo asigna)
 EXPOSE 8000
 
-# Command to run your application (adjust if needed)
-# Use 0.0.0.0 to bind to all network interfaces within the container
+# Comando para ejecutar tu aplicación (ajusta si es necesario)
+# Usa 0.0.0.0 para escuchar en todas las interfaces dentro del contenedor
+# Railway generalmente proporciona la variable $PORT, pero 8000 también puede funcionar
+# si lo configuras en Railway. Usar 8000 aquí es más explícito si no estás seguro de $PORT.
 CMD ["uvicorn", "your_main_script_name:app", "--host", "0.0.0.0", "--port", "8000"]
