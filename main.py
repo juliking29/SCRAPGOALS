@@ -87,38 +87,32 @@ def init_driver():
     """Initialize Chrome WebDriver in headless mode with version checks."""
     print("Initializing WebDriver...")
     
-    # Configure Chrome options
     chrome_options = ChromeOptions()
-    chrome_options.add_argument('--headless=new')  # Use new headless mode
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
     chrome_options.add_argument('--disable-gpu')
+    chrome_options.add_argument('--headless=new')  # New headless mode
     chrome_options.add_argument('--window-size=1920x1080')
     chrome_options.add_argument('--remote-debugging-port=9222')
     chrome_options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36')
-    chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
-    chrome_options.add_argument('--log-level=3')
     
-    # Explicitly set Chrome binary location
+    # Configuraciones adicionales importantes
     chrome_options.binary_location = '/usr/bin/google-chrome-stable'
+    chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+    chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    chrome_options.add_experimental_option('useAutomationExtension', False)
 
     try:
-        # First try with default PATH
-        driver = webdriver.Chrome(options=chrome_options)
-        print("WebDriver initialized successfully with default PATH.")
+        # Intento con Service explícito
+        from selenium.webdriver.chrome.service import Service
+        service = Service(executable_path='/usr/local/bin/chromedriver')
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+        print("WebDriver initialized successfully!")
         return driver
     except Exception as e:
-        print(f"First attempt failed: {str(e)}")
-        try:
-            # Fallback to explicit path
-            service = webdriver.chrome.service.Service('/usr/local/bin/chromedriver')
-            driver = webdriver.Chrome(service=service, options=chrome_options)
-            print("WebDriver initialized successfully with explicit path.")
-            return driver
-        except Exception as e:
-            print(f"Failed to initialize WebDriver: {str(e)}")
-            print(traceback.format_exc())
-            return None
+        print(f"Error initializing WebDriver: {str(e)}")
+        print(traceback.format_exc())
+        return None
 
 def extract_month_from_heading(heading_text):
     """Extracts month name from heading string."""
