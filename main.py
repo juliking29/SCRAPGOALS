@@ -55,57 +55,40 @@ app.add_middleware(
 
 # --- Selenium WebDriver Initialization ---
 def init_driver():
-    """Initialize Chrome WebDriver in headless mode."""
+    """Initialize Chrome WebDriver in headless mode for Docker environment."""
     print("Initializing WebDriver...")
     chrome_options = ChromeOptions()
+    
+    # Docker-specific Chrome options
     chrome_options.add_argument('--headless')
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
     chrome_options.add_argument('--disable-gpu')
     chrome_options.add_argument('--window-size=1920x1080')
+    chrome_options.add_argument('--remote-debugging-port=9222')
+    
     # Using a common user agent
     chrome_options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    
     # Disable logging clutter from Selenium/Chrome
     chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
-    chrome_options.add_argument('--log-level=3') # Suppress logs further
+    chrome_options.add_argument('--log-level=3')
 
-
-    # --- IMPORTANT: WebDriver Path ---
-    # Option 1: Assume chromedriver is in PATH (common setup)
     try:
-         # Adding service object explicitly can sometimes help, even for PATH
-         service = webdriver.chrome.service.Service()
-         driver = webdriver.Chrome(service=service, options=chrome_options)
-         print("WebDriver initialized successfully (using Service, assumed from PATH).")
-         return driver
+        # Explicitly specify the chromedriver path for Docker
+        service = webdriver.chrome.service.Service(executable_path='/usr/local/bin/chromedriver')
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+        print("WebDriver initialized successfully in Docker environment.")
+        return driver
     except WebDriverException as e:
-         print(f"WebDriverException assuming PATH failed: {e}")
-         # Option 2: Explicitly specify the path (Uncomment and modify if needed)
-         # webdriver_path = '/path/to/your/chromedriver' # <--- CHANGE THIS PATH
-         # webdriver_path = 'C:\\path\\to\\your\\chromedriver.exe' # Windows example
-         # if not os.path.exists(webdriver_path):
-         #     print(f"ERROR: WebDriver not found at specified path: {webdriver_path}")
-         #     return None
-         # try:
-         #     service = webdriver.chrome.service.Service(executable_path=webdriver_path)
-         #     driver = webdriver.Chrome(service=service, options=chrome_options)
-         #     print(f"WebDriver initialized successfully from path: {webdriver_path}")
-         #     return driver
-         # except WebDriverException as e_path:
-         #      print(f"WebDriverException using explicit path failed: {e_path}")
-         #      print("Please ensure ChromeDriver is installed and accessible.")
-         #      return None
-         # except Exception as e_gen:
-         #      print(f"Generic Exception during WebDriver initialization: {e_gen}")
-         #      return None
-
-         # If PATH failed and explicit path is commented out/failed
-         print("Could not initialize WebDriver. Ensure ChromeDriver is in your PATH or specify the path in the script.")
-         return None
+        print(f"WebDriver initialization failed: {e}")
+        print("Detailed error traceback:")
+        print(traceback.format_exc())
+        return None
     except Exception as e_outer:
-         print(f"Unexpected error during WebDriver initialization: {e_outer}")
-         print(traceback.format_exc())
-         return None
+        print(f"Unexpected error during WebDriver initialization: {e_outer}")
+        print(traceback.format_exc())
+        return None
 
 
 # --- parse_table and extract_month_from_heading functions remain the same ---
